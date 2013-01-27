@@ -57,7 +57,7 @@ struct listelement* rabin(char *filename) {
 
     FILE *fp;
     fp = fopen(filename, "rb");
-    if (!fp) { return NULL; }
+    if (!fp) { PyErr_SetFromErrno(PyExc_IOError); return NULL; }
 
     //inizalize ring
     int i=0;
@@ -133,6 +133,9 @@ static PyObject * pyrabin(PyObject *self, PyObject *args) {
     const char *filename;
     if (!PyArg_ParseTuple(args, "s", &filename)) { return NULL; }
     struct listelement* head = rabin(filename);
+    
+    if (head == NULL) { return NULL; } //returns IOError
+    
     struct listelement *curr = head;
     PyObject *list, *pylistelement;
     if (!(list=PyList_New(0))) return NULL;
