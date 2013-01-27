@@ -1,3 +1,4 @@
+#include <Python.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -26,7 +27,7 @@ const int MINSIZE = 8*1024;
 
 
 struct listelement {
-    unsigned int size;
+    unsigned long long size;
     struct listelement *next;
 };
 
@@ -52,9 +53,11 @@ struct listelement* rabin(char *filename) {
     head = malloc(sizeof(struct listelement));  
     curr = head;
 
+    curr->size = 0;
+
     FILE *fp;
     fp = fopen(filename, "rb");
-    if (!fp) { return head; }
+    if (!fp) { return NULL; }
 
     //inizalize ring
     int i=0;
@@ -69,7 +72,7 @@ struct listelement* rabin(char *filename) {
     unsigned long long oldest_byte = 0;
     int newest_byte_position=0;
 	int oldest_byte_position=1;
-    int blocksize = 0;
+    unsigned long long blocksize = 0;
     while (ch != EOF) {
     	ch=getc(fp);
         
@@ -90,6 +93,7 @@ struct listelement* rabin(char *filename) {
                     if (curr->size!=0) { //only 0 if first element in list
                         curr->next = malloc(sizeof(struct listelement)); 
                         curr = curr->next;
+                        curr->next = NULL;
                     }
                     curr->size = blocksize;
                     last_position = current_position;
@@ -109,7 +113,7 @@ void print_rabin(char *filename) {
     struct listelement* head = rabin(filename);
     struct listelement *curr = head;
     while (curr != NULL) {
-        printf("%d\n", curr->size);
+        printf("%llu\n", curr->size);
         curr = curr->next;
     }
 }
@@ -123,3 +127,29 @@ int main(int argc, char *argv[]){
     print_rabin(argv[1]);
     return 0;
 }
+
+
+static PyObject * pyrabin(PyObject *self, PyObject *args) {
+    const char *filename;
+    if (!PyArg_ParseTuple(args, "s", &filename)) { return NULL; }
+    struct listelement* head = rabin(filename);
+    struct listelement *curr = head;
+    PyObject *list, *pylistelement;
+    if (!(list=PyList_New(0))) return NULL;
+    while (curr != NULL) {
+        pylistelement=Py_BuildValue("l", curr->size);
+        PyList_Append(list, pylistelement);
+        curr = curr->next;
+    }
+    Py_DECREF(pylistelement);
+    return list;
+}
+
+static PyMethodDef IndexerMethods[] = {
+    {"rabin",  pyrabin, METH_VARARGS, "Rabin fingerprinting a file"},
+    {NULL, NULL, 0, NULL}     
+};
+
+PyMODINIT_FUNC initrabin(void) {
+        (void) Py_InitModule("rabin", IndexerMethods);
+};
