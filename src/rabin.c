@@ -76,9 +76,7 @@ struct node* rabin(char *filename) {
     int ch=0;
     unsigned long long fingerprint = 0;
     unsigned long long blocksize = 0;
-    while (ch != EOF) {
-    	ch=getc(fp);
-
+    while ((ch=fgetc(fp)) != EOF) {
         fingerprint *= PRIME;
         fingerprint += ch;
         fingerprint -= map[cycle_curr->value];
@@ -98,6 +96,16 @@ struct node* rabin(char *filename) {
         blocksize++;
     }
     fclose(fp);
+    
+    // add last block if not yet done 
+    if (blocksize != 0) {
+            curr->value = blocksize;
+            curr->next = malloc(sizeof(struct node)); 
+            curr = curr->next;
+            curr->next = NULL;
+            blocksize=0;
+    }
+
     return head;
 }
 
