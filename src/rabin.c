@@ -22,9 +22,9 @@ limitations under the License. */
 
 const int PRIME = 3;
 const int WINDOWSIZE = 48;
-const unsigned int AVGSIZE = 64*1024-1;
-const int MAXSIZE = 256*1024;
-const int MINSIZE = 8*1024;
+const unsigned int AVGSIZE = 1*1024*1024-1;
+const int MAXSIZE = 10*1024*1024;
+const int MINSIZE = 1*1024*1024;
 
 
 struct node {
