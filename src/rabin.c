@@ -78,7 +78,7 @@ struct node* rabin(char *filename) {
     unsigned long long blocksize = 0;
     while ((ch=fgetc(fp)) != EOF) {
         fingerprint *= PRIME;
-        fingerprint += ch;
+        fingerprint += (ch+1); //add 1 to make immune to long sequences of 0 
         fingerprint -= map[cycle_curr->value];
         
         cycle_curr->value = ch;
