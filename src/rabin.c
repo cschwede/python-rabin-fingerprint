@@ -58,6 +58,7 @@ struct node* rabin(char *filename) {
     head = malloc(sizeof(struct node));  
     curr = head;
     curr->value = 0;
+    curr->next = NULL;
     
     // inizalize cyclic ring
     struct node *cycle_head = NULL;
@@ -121,6 +122,7 @@ static PyObject * pyrabin(PyObject *self, PyObject *args) {
     struct node* curr = rabin(filename);
 
     if (curr == NULL) { return NULL; } //returns IOError
+    if (curr->next == NULL) { return list; } // return empty list
     while (curr->next != NULL) {
         pynode=Py_BuildValue("l", curr->value);
         PyList_Append(list, pynode);
