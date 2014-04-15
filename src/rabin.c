@@ -112,7 +112,7 @@ struct node* rabin(char *filename) {
 
 
 static PyObject * pyrabin(PyObject *self, PyObject *args) {
-    const char *filename;
+    char *filename;
     if (!PyArg_ParseTuple(args, "s", &filename)) { return NULL; }
 
     PyObject *list;
