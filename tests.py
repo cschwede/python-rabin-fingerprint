@@ -41,13 +41,14 @@ class TestFingerprint(unittest.TestCase):
         tmpf2.close()
 
         old_chunks = rabin(tmpf.name)
-        reference = [96802, 71515, 67965, 87055, 56484, 58837, 83202,
-                     68362, 102553, 37774, 38994, 108846, 170187]
+        reference = [97374, 78240, 80059, 35852, 61484, 89381,
+                     139592, 73169, 36567, 34204, 130637, 192017]
         self.assertEqual(reference, old_chunks)
 
         # only one chunk differs
         new_chunks = rabin(tmpf2.name)
-        reference[7] = 69386
+        reference[6] = 140616
+        reference[7] = 73169
         self.assertEqual(reference, new_chunks)
 
     def test_empty_file(self):
