@@ -81,24 +81,24 @@ struct node* rabin(char *filename) {
     int read = 0;
     while ((read = fread(buffer, 1, sizeof(buffer), fp))) {
         for (int i=0; i < read; i++) {
-        ch = buffer[i];
-        fingerprint *= PRIME;
-        fingerprint += (ch+1); //add 1 to make immune to long sequences of 0 
-        fingerprint -= map[cycle_curr->value];
-        
-        cycle_curr->value = ch+1;
-        cycle_curr = cycle_curr->next;
+            ch = buffer[i];
+            fingerprint *= PRIME;
+            fingerprint += (ch+1); //add 1 to make immune to long sequences of 0
+            fingerprint -= map[cycle_curr->value];
 
-        if (blocksize > MINSIZE) {
-            if (((fingerprint & AVGSIZE) == 1) || (blocksize > MAXSIZE)) {
-                curr->value = blocksize;
-                curr->next = malloc(sizeof(struct node)); 
-                curr = curr->next;
-                curr->next = NULL;
-                blocksize=0;
+            cycle_curr->value = ch+1;
+            cycle_curr = cycle_curr->next;
+
+            if (blocksize > MINSIZE) {
+                if (((fingerprint & AVGSIZE) == 1) || (blocksize > MAXSIZE)) {
+                    curr->value = blocksize;
+                    curr->next = malloc(sizeof(struct node));
+                    curr = curr->next;
+                    curr->next = NULL;
+                    blocksize=0;
+                }
             }
-        }
-        blocksize++;
+            blocksize++;
         }
     }
     fclose(fp);
