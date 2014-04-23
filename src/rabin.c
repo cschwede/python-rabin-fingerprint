@@ -77,7 +77,11 @@ struct node* rabin(char *filename) {
     int ch=0;
     unsigned long long fingerprint = 0;
     unsigned long long blocksize = 0;
-    while ((ch=fgetc(fp)) != EOF) {
+    unsigned char buffer[8192];  // reading file in chunks is much faster
+    int read = 0;
+    while ((read = fread(buffer, 1, sizeof(buffer), fp))) {
+        for (int i=0; i < read; i++) {
+        ch = buffer[i];
         fingerprint *= PRIME;
         fingerprint += (ch+1); //add 1 to make immune to long sequences of 0 
         fingerprint -= map[cycle_curr->value];
@@ -95,6 +99,7 @@ struct node* rabin(char *filename) {
             }
         }
         blocksize++;
+        }
     }
     fclose(fp);
     
