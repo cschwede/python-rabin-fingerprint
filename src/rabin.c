@@ -82,7 +82,7 @@ struct node* rabin(char *filename) {
         fingerprint += (ch+1); //add 1 to make immune to long sequences of 0 
         fingerprint -= map[cycle_curr->value];
         
-        cycle_curr->value = ch;
+        cycle_curr->value = ch+1;
         cycle_curr = cycle_curr->next;
 
         if (blocksize > MINSIZE) {
