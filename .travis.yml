@@ -1,0 +1,11 @@
+language: python
+compiler:
+  - gcc
+install:
+  - python setup.py install
+script:
+  - python tests.py
+notifications:
+ email:
+   recipients:
+      - github@cschwede.de
