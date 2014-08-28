@@ -20,13 +20,6 @@ limitations under the License. */
     Uses Rabin fingerprint to determine block boundaries.  */
 
 
-const int PRIME = 3;
-const int WINDOWSIZE = 48;
-const unsigned int AVGSIZE = 64*1024-1;
-const int MAXSIZE = 256*1024;
-const int MINSIZE = 32*1024;
-
-
 struct node {
     unsigned long long value;
     struct node *next;
@@ -45,12 +38,12 @@ unsigned long long *char_nth_prime(int windowsize, int prime) {
 }
 
 
-struct node* rabin(char *filename) {
+struct node* rabin(char *filename, int avgsize, int minsize, int maxsize, int prime, int windowsize) {
     FILE *fp;
     fp = fopen(filename, "rb");
     if (!fp) { PyErr_SetFromErrno(PyExc_IOError); return NULL; }
 
-    unsigned long long *map = char_nth_prime(WINDOWSIZE, PRIME);
+    unsigned long long *map = char_nth_prime(windowsize, prime);
 
     // initialize linked list for returned blocksizes
     struct node *head = NULL;
@@ -67,7 +60,7 @@ struct node* rabin(char *filename) {
     cycle_curr = cycle_head;
     cycle_curr->value = 0;
     int i = 0;
-    for (i = 0; i < (WINDOWSIZE-1); i++) {
+    for (i = 0; i < (windowsize-1); i++) {
         cycle_curr->next = malloc(sizeof(struct node)); 
         cycle_curr = cycle_curr->next;
         cycle_curr->value = 0;
@@ -82,15 +75,15 @@ struct node* rabin(char *filename) {
     while ((read = fread(buffer, 1, sizeof(buffer), fp))) {
         for (int i=0; i < read; i++) {
             ch = buffer[i];
-            fingerprint *= PRIME;
+            fingerprint *= prime;
             fingerprint += (ch+1); //add 1 to make immune to long sequences of 0
             fingerprint -= map[cycle_curr->value];
 
             cycle_curr->value = ch+1;
             cycle_curr = cycle_curr->next;
 
-            if (blocksize > MINSIZE) {
-                if (((fingerprint & AVGSIZE) == 1) || (blocksize > MAXSIZE)) {
+            if (blocksize > minsize) {
+                if (((fingerprint & avgsize) == 1) || (blocksize > maxsize)) {
                     curr->value = blocksize;
                     curr->next = malloc(sizeof(struct node));
                     curr = curr->next;
@@ -116,15 +109,26 @@ struct node* rabin(char *filename) {
 }
 
 
-static PyObject * pyrabin(PyObject *self, PyObject *args) {
+static PyObject * pyrabin(PyObject *self, PyObject *args, PyObject *kwargs) {
     char *filename;
-    if (!PyArg_ParseTuple(args, "s", &filename)) { return NULL; }
+    int avgsize = 64*1024-1;
+    int minsize = 32*1024;
+    int maxsize = 256*1024;
+    int prime = 3;
+    int windowsize = 48;
+    static char *kwlist[] = {"filename", "avgsize", "minsize",
+                             "maxsize", "prime", "windowsize", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|IIIII", kwlist,
+                                     &filename, &avgsize, &minsize,
+                                     &maxsize, &prime, &windowsize))
+        return NULL;
 
     PyObject *list;
     PyObject *pynode = NULL;
     if (!(list=PyList_New(0))) return NULL;
     
-    struct node* curr = rabin(filename);
+    struct node* curr = rabin(filename, avgsize, minsize, maxsize, prime, windowsize);
 
     if (curr == NULL) { return NULL; } //returns IOError
     if (curr->next == NULL) { return list; } // return empty list
@@ -139,11 +143,8 @@ static PyObject * pyrabin(PyObject *self, PyObject *args) {
 
 
 static PyMethodDef IndexerMethods[] = {
-    {"rabin", 
-    pyrabin, 
-    METH_VARARGS, 
-    "Rabin fingerprinting a file"},
-    {NULL, NULL, 0, NULL}     
+    {"rabin", (PyCFunction)pyrabin, METH_VARARGS|METH_KEYWORDS},
+    {NULL, NULL}
 };
 
 
