@@ -38,11 +38,7 @@ unsigned long long *char_nth_prime(int windowsize, int prime) {
 }
 
 
-struct node* rabin(char *filename, int avgsize, int minsize, int maxsize, int prime, int windowsize) {
-    FILE *fp;
-    fp = fopen(filename, "rb");
-    if (!fp) { PyErr_SetFromErrno(PyExc_IOError); return NULL; }
-
+struct node* rabin(FILE *fp, int avgsize, int minsize, int maxsize, int prime, int windowsize) {
     unsigned long long *map = char_nth_prime(windowsize, prime);
 
     // initialize linked list for returned blocksizes
@@ -94,7 +90,6 @@ struct node* rabin(char *filename, int avgsize, int minsize, int maxsize, int pr
             blocksize++;
         }
     }
-    fclose(fp);
     
     // add last block if not yet done 
     if (blocksize != 0) {
@@ -127,8 +122,13 @@ static PyObject * pyrabin(PyObject *self, PyObject *args, PyObject *kwargs) {
     PyObject *list;
     PyObject *pynode = NULL;
     if (!(list=PyList_New(0))) return NULL;
-    
-    struct node* curr = rabin(filename, avgsize, minsize, maxsize, prime, windowsize);
+
+    FILE *fp;
+    fp = fopen(filename, "rb");
+    if (!fp) { PyErr_SetFromErrno(PyExc_IOError); return NULL; }
+
+    struct node* curr = rabin(fp, avgsize, minsize, maxsize, prime, windowsize);
+    fclose(fp);
 
     if (curr == NULL) { return NULL; } //returns IOError
     if (curr->next == NULL) { return list; } // return empty list
@@ -143,6 +143,8 @@ static PyObject * pyrabin(PyObject *self, PyObject *args, PyObject *kwargs) {
 
 
 static PyMethodDef IndexerMethods[] = {
+    {"chunksizes_from_filename", (PyCFunction)pyrabin, METH_VARARGS|METH_KEYWORDS},
+    // Deprecated method name
     {"rabin", (PyCFunction)pyrabin, METH_VARARGS|METH_KEYWORDS},
     {NULL, NULL}
 };

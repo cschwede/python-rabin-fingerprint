@@ -5,7 +5,7 @@ import random
 import tempfile
 import unittest
 
-from rabin import rabin
+from rabin import chunksizes_from_filename
 
 
 class TestFingerprint(unittest.TestCase):
@@ -40,13 +40,13 @@ class TestFingerprint(unittest.TestCase):
         self.filenames.append(tmpf2.name)
         tmpf2.close()
 
-        old_chunks = rabin(tmpf.name)
+        old_chunks = chunksizes_from_filename(tmpf.name)
         reference = [97374, 78240, 80059, 35852, 61484, 89381,
                      139592, 73169, 36567, 34204, 130637, 192017]
         self.assertEqual(reference, old_chunks)
 
         # only one chunk differs
-        new_chunks = rabin(tmpf2.name)
+        new_chunks = chunksizes_from_filename(tmpf2.name)
         reference[6] = 140616
         reference[7] = 73169
         self.assertEqual(reference, new_chunks)
@@ -54,11 +54,11 @@ class TestFingerprint(unittest.TestCase):
     def test_empty_file(self):
         f = tempfile.NamedTemporaryFile(delete=False)
         self.filenames.append(f.name)
-        empty_chunks = rabin(f.name)
+        empty_chunks = chunksizes_from_filename(f.name)
         self.assertEqual([], empty_chunks)
 
     def test_missing_file(self):
-        self.assertRaises(IOError, rabin, 'noneexistentfile')
+        self.assertRaises(IOError, chunksizes_from_filename, 'noneexistentfile')
 
 
 if __name__ == '__main__':
