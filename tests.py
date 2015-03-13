@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import random
+import sys
 import tempfile
 import unittest
 
@@ -20,22 +21,33 @@ class TestFingerprint(unittest.TestCase):
             except:
                 pass
 
+    def _choice(self, seq):
+        """Choose a random element from a non-empty sequence.
+
+        Behaviour of random.choice changed in Python 3.2:
+        https://hg.python.org/cpython/rev/c2f8418a0e14/
+
+        This method is used in Python2 and thus returns the
+        same result in Python3.
+        """
+        return seq[int(random.random() * len(seq))]
+
     def test_fingerprint(self):
         # make the test reproducable
         random.seed(0)
         byte = [chr(i) for i in range(256)]
 
         # create two files: both are identical except 1 KiB in the middle
-        data1 = ''.join(random.choice(byte) for _ in range(512 * 1024))
-        data2 = ''.join(random.choice(byte) for _ in range(1 * 1024))
-        data3 = ''.join(random.choice(byte) for _ in range(512 * 1024))
+        data1 = ''.join(self._choice(byte) for _ in range(512 * 1024))
+        data2 = ''.join(self._choice(byte) for _ in range(1 * 1024))
+        data3 = ''.join(self._choice(byte) for _ in range(512 * 1024))
 
-        tmpf = tempfile.NamedTemporaryFile(delete=False)
+        tmpf = tempfile.NamedTemporaryFile(mode="wt", delete=False)
         tmpf.write(data1 + data3)
         self.filenames.append(tmpf.name)
         tmpf.close()
 
-        tmpf2 = tempfile.NamedTemporaryFile(delete=False)
+        tmpf2 = tempfile.NamedTemporaryFile(mode="wt", delete=False)
         tmpf2.write(data1 + data2 + data3)
         self.filenames.append(tmpf2.name)
         tmpf2.close()

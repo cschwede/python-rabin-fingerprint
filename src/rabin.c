@@ -150,6 +150,20 @@ static PyMethodDef IndexerMethods[] = {
 };
 
 
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "rabin",
+    NULL,
+    -1,
+    IndexerMethods,
+};
+
+PyMODINIT_FUNC PyInit_rabin(void) {
+    return PyModule_Create(&moduledef);
+}
+#else
 PyMODINIT_FUNC initrabin(void) {
         (void) Py_InitModule("rabin", IndexerMethods);
 };
+#endif
