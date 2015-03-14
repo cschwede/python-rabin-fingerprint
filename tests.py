@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from rabin import chunksizes_from_filename
+from rabin import chunksizes_from_filename, chunksizes_from_fd
 
 
 class TestFingerprint(unittest.TestCase):
@@ -62,6 +62,13 @@ class TestFingerprint(unittest.TestCase):
         reference[6] = 140616
         reference[7] = 73169
         self.assertEqual(reference, new_chunks)
+
+        # Test with filedescriptor as well
+        with open(tmpf.name) as fd:
+            old_chunks = chunksizes_from_fd(fd.fileno())
+        reference = [97374, 78240, 80059, 35852, 61484, 89381,
+                     139592, 73169, 36567, 34204, 130637, 192017]
+        self.assertEqual(reference, old_chunks)
 
     def test_empty_file(self):
         f = tempfile.NamedTemporaryFile(delete=False)

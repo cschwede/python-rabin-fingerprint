@@ -142,8 +142,46 @@ static PyObject * pyrabin(PyObject *self, PyObject *args, PyObject *kwargs) {
 }
 
 
+static PyObject * pyrabin_fd(PyObject *self, PyObject *args, PyObject *kwargs) {
+    int filedesc;
+    int avgsize = 64*1024-1;
+    int minsize = 32*1024;
+    int maxsize = 256*1024;
+    int prime = 3;
+    int windowsize = 48;
+    static char *kwlist[] = {"filedesc", "avgsize", "minsize",
+                             "maxsize", "prime", "windowsize", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "I|IIIII", kwlist,
+                                     &filedesc, &avgsize, &minsize,
+                                     &maxsize, &prime, &windowsize))
+        return NULL;
+
+    PyObject *list;
+    PyObject *pynode = NULL;
+    if (!(list=PyList_New(0))) return NULL;
+
+    FILE *fp;
+    fp = fdopen(filedesc, "rb");
+    if (!fp) { PyErr_SetFromErrno(PyExc_IOError); return NULL; }
+
+    struct node* curr = rabin(fp, avgsize, minsize, maxsize, prime, windowsize);
+
+    if (curr == NULL) { return NULL; } //returns IOError
+    if (curr->next == NULL) { return list; } // return empty list
+    while (curr->next != NULL) {
+        pynode=Py_BuildValue("l", curr->value);
+        PyList_Append(list, pynode);
+        curr = curr->next;
+    }
+    Py_DECREF(pynode);
+    return list;
+}
+
+
 static PyMethodDef IndexerMethods[] = {
     {"chunksizes_from_filename", (PyCFunction)pyrabin, METH_VARARGS|METH_KEYWORDS},
+    {"chunksizes_from_fd", (PyCFunction)pyrabin_fd, METH_VARARGS|METH_KEYWORDS},
     // Deprecated method name
     {"rabin", (PyCFunction)pyrabin, METH_VARARGS|METH_KEYWORDS},
     {NULL, NULL}
