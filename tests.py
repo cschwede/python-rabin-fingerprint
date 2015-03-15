@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+import hashlib
 import os
 import random
 import sys
@@ -12,7 +13,44 @@ from rabin import chunksizes_from_filename, chunksizes_from_fd
 class TestFingerprint(unittest.TestCase):
 
     def setUp(self):
+        random.seed(0)
         self.filenames = []
+
+        if sys.version > '3':
+            byte = [chr(i) for i in range(256)]
+        else:
+            byte = [unichr(i) for i in range(256)]
+
+        # create two files: both are identical except 1 KiB in the middle
+        self.data1 = ''.join(self._choice(byte) for _ in range(512 * 1024))
+        self.data2 = ''.join(self._choice(byte) for _ in range(1 * 1024))
+        self.data3 = ''.join(self._choice(byte) for _ in range(512 * 1024))
+
+        self.tmpf = tempfile.NamedTemporaryFile(mode="wb", delete=False)
+        s = self.data1 + self.data3
+        s = s.encode('utf-8')
+        self.tmpf.write(s)
+        self.filenames.append(self.tmpf.name)
+        self.tmpf.close()
+
+        # Ensure that sample data is always the same
+        m1 = hashlib.md5(s)
+        self.assertEqual('c91de0700e243bd2aedefddb0a5b1845', m1.hexdigest())
+
+        self.tmpf2 = tempfile.NamedTemporaryFile(mode="wb", delete=False)
+        s = self.data1 + self.data2 + self.data3
+        s = s.encode('utf-8')
+        self.tmpf2.write(s)
+        self.filenames.append(self.tmpf2.name)
+        self.tmpf2.close()
+
+        # Ensure that sample data is always the same
+        m2 = hashlib.md5(s)
+        self.assertEqual('c9601df3a8afc1bb5ee61dcbc7ebfc42', m2.hexdigest())
+
+        self.reference = [55284, 225345, 34119, 39188, 120699, 97026, 120605,
+                          72303, 35120, 43389, 63216, 46086, 112801, 98696,
+                          45160, 82568, 95650, 35648, 78397, 71123]
 
     def tearDown(self):
         for filename in self.filenames:
@@ -32,43 +70,21 @@ class TestFingerprint(unittest.TestCase):
         """
         return seq[int(random.random() * len(seq))]
 
-    def test_fingerprint(self):
-        # make the test reproducable
-        random.seed(0)
-        byte = [chr(i) for i in range(256)]
+    def test_fingerprint_from_filename(self):
+        chunks = chunksizes_from_filename(self.tmpf.name)
+        self.assertEqual(self.reference, chunks)
 
-        # create two files: both are identical except 1 KiB in the middle
-        data1 = ''.join(self._choice(byte) for _ in range(512 * 1024))
-        data2 = ''.join(self._choice(byte) for _ in range(1 * 1024))
-        data3 = ''.join(self._choice(byte) for _ in range(512 * 1024))
+        # only a few chunks differ
+        chunks = chunksizes_from_filename(self.tmpf2.name)
+        self.reference[6] = 120605
+        self.reference[7] = 72303
+        self.reference[8] = 36679
+        self.assertEqual(self.reference, chunks)
 
-        tmpf = tempfile.NamedTemporaryFile(mode="wt", delete=False)
-        tmpf.write(data1 + data3)
-        self.filenames.append(tmpf.name)
-        tmpf.close()
-
-        tmpf2 = tempfile.NamedTemporaryFile(mode="wt", delete=False)
-        tmpf2.write(data1 + data2 + data3)
-        self.filenames.append(tmpf2.name)
-        tmpf2.close()
-
-        old_chunks = chunksizes_from_filename(tmpf.name)
-        reference = [97374, 78240, 80059, 35852, 61484, 89381,
-                     139592, 73169, 36567, 34204, 130637, 192017]
-        self.assertEqual(reference, old_chunks)
-
-        # only one chunk differs
-        new_chunks = chunksizes_from_filename(tmpf2.name)
-        reference[6] = 140616
-        reference[7] = 73169
-        self.assertEqual(reference, new_chunks)
-
-        # Test with filedescriptor as well
-        with open(tmpf.name) as fd:
+    def test_fingerprint_from_fd(self):
+        with open(self.tmpf.name) as fd:
             old_chunks = chunksizes_from_fd(fd.fileno())
-        reference = [97374, 78240, 80059, 35852, 61484, 89381,
-                     139592, 73169, 36567, 34204, 130637, 192017]
-        self.assertEqual(reference, old_chunks)
+        self.assertEqual(self.reference, old_chunks)
 
     def test_empty_file(self):
         f = tempfile.NamedTemporaryFile(delete=False)
