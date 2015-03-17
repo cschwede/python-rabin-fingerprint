@@ -12,9 +12,10 @@ from rabin import chunksizes_from_filename, chunksizes_from_fd
 
 class TestFingerprint(unittest.TestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         random.seed(0)
-        self.filenames = []
+        cls.filenames = []
 
         if sys.version > '3':
             byte = [chr(i) for i in range(256)]
@@ -22,44 +23,46 @@ class TestFingerprint(unittest.TestCase):
             byte = [unichr(i) for i in range(256)]
 
         # create two files: both are identical except 1 KiB in the middle
-        self.data1 = ''.join(self._choice(byte) for _ in range(512 * 1024))
-        self.data2 = ''.join(self._choice(byte) for _ in range(1 * 1024))
-        self.data3 = ''.join(self._choice(byte) for _ in range(512 * 1024))
+        data1 = ''.join(cls._choice(byte) for _ in range(512 * 1024))
+        data2 = ''.join(cls._choice(byte) for _ in range(1 * 1024))
+        data3 = ''.join(cls._choice(byte) for _ in range(512 * 1024))
 
-        self.tmpf = tempfile.NamedTemporaryFile(mode="wb", delete=False)
-        s = self.data1 + self.data3
-        s = s.encode('utf-8')
-        self.tmpf.write(s)
-        self.filenames.append(self.tmpf.name)
-        self.tmpf.close()
-
-        # Ensure that sample data is always the same
-        m1 = hashlib.md5(s)
-        self.assertEqual('c91de0700e243bd2aedefddb0a5b1845', m1.hexdigest())
-
-        self.tmpf2 = tempfile.NamedTemporaryFile(mode="wb", delete=False)
-        s = self.data1 + self.data2 + self.data3
-        s = s.encode('utf-8')
-        self.tmpf2.write(s)
-        self.filenames.append(self.tmpf2.name)
-        self.tmpf2.close()
+        cls.tmpf = tempfile.NamedTemporaryFile(mode="wb", delete=False)
+        data = data1 + data3
+        data = data.encode('utf-8')
+        cls.tmpf.write(data)
+        cls.filenames.append(cls.tmpf.name)
+        cls.tmpf.close()
 
         # Ensure that sample data is always the same
-        m2 = hashlib.md5(s)
-        self.assertEqual('c9601df3a8afc1bb5ee61dcbc7ebfc42', m2.hexdigest())
+        m1 = hashlib.md5(data)
+        assert 'c91de0700e243bd2aedefddb0a5b1845' == m1.hexdigest()
 
-        self.reference = [55284, 225345, 34119, 39188, 120699, 97026, 120605,
+        cls.tmpf2 = tempfile.NamedTemporaryFile(mode="wb", delete=False)
+        data = data1 + data2 + data3
+        data = data.encode('utf-8')
+        cls.tmpf2.write(data)
+        cls.filenames.append(cls.tmpf2.name)
+        cls.tmpf2.close()
+
+        # Ensure that sample data is always the same
+        m2 = hashlib.md5(data)
+        assert 'c9601df3a8afc1bb5ee61dcbc7ebfc42'== m2.hexdigest()
+
+        cls.reference = [55284, 225345, 34119, 39188, 120699, 97026, 120605,
                           72303, 35120, 43389, 63216, 46086, 112801, 98696,
                           45160, 82568, 95650, 35648, 78397, 71123]
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(self):
         for filename in self.filenames:
             try:
                 os.remove(filename)
             except:
                 pass
 
-    def _choice(self, seq):
+    @classmethod
+    def _choice(cls, seq):
         """Choose a random element from a non-empty sequence.
 
         Behaviour of random.choice changed in Python 3.2:
