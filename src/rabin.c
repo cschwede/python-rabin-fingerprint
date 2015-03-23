@@ -38,6 +38,51 @@ unsigned long long *char_nth_prime(int windowsize, int prime) {
 }
 
 
+struct node* init_cyclic_ring(int windowsize) {
+    struct node *cycle_head = NULL;
+    struct node *cycle_curr = NULL;
+    cycle_head = malloc(sizeof(struct node));
+    cycle_curr = cycle_head;
+    cycle_curr->value = 0;
+    int i = 0;
+    for (i = 0; i < (windowsize-1); i++) {
+        cycle_curr->next = malloc(sizeof(struct node));
+        cycle_curr = cycle_curr->next;
+        cycle_curr->value = 0;
+    }
+    cycle_curr->next = cycle_head; //close the ring
+    return cycle_curr;
+}
+
+
+void update(unsigned char *buffer, int read, struct node **cycle_curr, struct node **curr, unsigned long long *fingerprint, int prime, unsigned long long *blocksize, unsigned long long *map) {
+    int avgsize = 64*1024-1;
+    int minsize = 32*1024;
+    int maxsize = 256*1024;
+    int ch;
+    for (int i=0; i < read; i++) {
+        ch = buffer[i];
+        *fingerprint *= prime;
+        *fingerprint += (ch+1); //add 1 to make immune to long sequences of 0
+        *fingerprint -= map[(*cycle_curr)->value];
+
+        (*cycle_curr)->value = ch+1;
+        (*cycle_curr) = (*cycle_curr)->next;
+
+        if (*blocksize > minsize) {
+            if (((*fingerprint & avgsize) == 1) || (*blocksize > maxsize)) {
+                (*curr)->value = *blocksize;
+                (*curr)->next = malloc(sizeof(struct node));
+                (*curr) = (*curr)->next;
+                (*curr)->next = NULL;
+                *blocksize=0;
+            }
+        }
+        (*blocksize)++;
+    }
+}
+
+
 struct node* rabin(FILE *fp, int avgsize, int minsize, int maxsize, int prime, int windowsize) {
     unsigned long long *map = char_nth_prime(windowsize, prime);
 
@@ -48,47 +93,15 @@ struct node* rabin(FILE *fp, int avgsize, int minsize, int maxsize, int prime, i
     curr = head;
     curr->value = 0;
     curr->next = NULL;
-    
-    // inizalize cyclic ring
-    struct node *cycle_head = NULL;
-    struct node *cycle_curr = NULL; 
-    cycle_head = malloc(sizeof(struct node));  
-    cycle_curr = cycle_head;
-    cycle_curr->value = 0;
-    int i = 0;
-    for (i = 0; i < (windowsize-1); i++) {
-        cycle_curr->next = malloc(sizeof(struct node)); 
-        cycle_curr = cycle_curr->next;
-        cycle_curr->value = 0;
-    }
-    cycle_curr->next = cycle_head; //close the ring
 
-    int ch=0;
+    struct node *cycle_curr = init_cyclic_ring(windowsize);
+
     unsigned long long fingerprint = 0;
     unsigned long long blocksize = 0;
     unsigned char buffer[8192];  // reading file in chunks is much faster
     int read = 0;
     while ((read = fread(buffer, 1, sizeof(buffer), fp))) {
-        for (int i=0; i < read; i++) {
-            ch = buffer[i];
-            fingerprint *= prime;
-            fingerprint += (ch+1); //add 1 to make immune to long sequences of 0
-            fingerprint -= map[cycle_curr->value];
-
-            cycle_curr->value = ch+1;
-            cycle_curr = cycle_curr->next;
-
-            if (blocksize > minsize) {
-                if (((fingerprint & avgsize) == 1) || (blocksize > maxsize)) {
-                    curr->value = blocksize;
-                    curr->next = malloc(sizeof(struct node));
-                    curr = curr->next;
-                    curr->next = NULL;
-                    blocksize=0;
-                }
-            }
-            blocksize++;
-        }
+        update(buffer, read, &cycle_curr, &curr, &fingerprint, prime, &blocksize, map);
     }
     
     // add last block if not yet done 
