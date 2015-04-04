@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "rabin.h"
 
 /* Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,26 +19,6 @@ limitations under the License. */
 
 /*  Simple utility to calculate variable sized blocks of an input file.
     Uses Rabin fingerprint to determine block boundaries.  */
-
-
-struct node {
-    unsigned long long value;
-    struct node *next;
-};
-
-
-struct state {
-    struct node *cycle_curr;
-    struct node *curr;
-    struct node *head;
-    unsigned long long *map;
-    unsigned long long fingerprint;
-    unsigned long long blocksize;
-    int prime;
-    int avgsize;
-    int minsize;
-    int maxsize;
-};
 
 
 unsigned long long *char_nth_prime(int windowsize, int prime) {
