@@ -117,6 +117,16 @@ struct node* rabin(FILE *fp, int avgsize, int minsize, int maxsize, int prime, i
 }
 
 
+struct node* rabin_str(unsigned char *buffer, int read, int avgsize, int minsize, int maxsize, int prime, int windowsize) {
+
+    struct state *internal_state = init(avgsize, minsize, maxsize, prime, windowsize);
+
+    update(buffer, read, &internal_state);
+
+    return result(&internal_state);
+}
+
+
 static PyObject * pyrabin(PyObject *self, PyObject *args, PyObject *kwargs) {
     char *filename;
     int avgsize = 64*1024-1;
@@ -192,9 +202,45 @@ static PyObject * pyrabin_fd(PyObject *self, PyObject *args, PyObject *kwargs) {
 }
 
 
+static PyObject * pyrabin_str(PyObject *self, PyObject *args, PyObject *kwargs) {
+    unsigned char *buffer;
+    int read;
+    int avgsize = 64*1024-1;
+    int minsize = 32*1024;
+    int maxsize = 256*1024;
+    int prime = 3;
+    int windowsize = 48;
+    static char *kwlist[] = {"filedesc", "avgsize", "minsize",
+                             "maxsize", "prime", "windowsize", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|IIIII", kwlist,
+                                     &buffer, &read, &avgsize, &minsize,
+                                     &maxsize, &prime, &windowsize))
+        return NULL;
+
+    PyObject *list;
+    PyObject *pynode = NULL;
+    if (!(list=PyList_New(0))) return NULL;
+
+    struct node* curr = rabin_str(buffer, read, avgsize, minsize, maxsize, prime, windowsize);
+
+    if (curr == NULL) { return NULL; } //returns IOError
+    if (curr->next == NULL) { return list; } // return empty list
+    while (curr->next != NULL) {
+        pynode=Py_BuildValue("l", curr->value);
+        PyList_Append(list, pynode);
+        curr = curr->next;
+    }
+    Py_DECREF(pynode);
+    return list;
+}
+
+
+
 static PyMethodDef IndexerMethods[] = {
     {"chunksizes_from_filename", (PyCFunction)pyrabin, METH_VARARGS|METH_KEYWORDS},
     {"chunksizes_from_fd", (PyCFunction)pyrabin_fd, METH_VARARGS|METH_KEYWORDS},
+    {"chunksizes_from_str", (PyCFunction)pyrabin_str, METH_VARARGS|METH_KEYWORDS},
     // Deprecated method name
     {"rabin", (PyCFunction)pyrabin, METH_VARARGS|METH_KEYWORDS},
     {NULL, NULL}

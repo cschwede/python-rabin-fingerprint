@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+import copy
 import hashlib
 import os
 import random
@@ -7,7 +8,7 @@ import sys
 import tempfile
 import unittest
 
-from rabin import chunksizes_from_filename, chunksizes_from_fd
+from rabin import chunksizes_from_filename, chunksizes_from_fd, chunksizes_from_str
 
 
 class TestFingerprint(unittest.TestCase):
@@ -37,6 +38,7 @@ class TestFingerprint(unittest.TestCase):
         # Ensure that sample data is always the same
         m1 = hashlib.md5(data)
         assert 'c91de0700e243bd2aedefddb0a5b1845' == m1.hexdigest()
+        cls.data = data
 
         cls.tmpf2 = tempfile.NamedTemporaryFile(mode="wb", delete=False)
         data = data1 + data2 + data3
@@ -49,9 +51,15 @@ class TestFingerprint(unittest.TestCase):
         m2 = hashlib.md5(data)
         assert 'c9601df3a8afc1bb5ee61dcbc7ebfc42'== m2.hexdigest()
 
+        cls.data2 = data
         cls.reference = [55284, 225345, 34119, 39188, 120699, 97026, 120605,
                           72303, 35120, 43389, 63216, 46086, 112801, 98696,
                           45160, 82568, 95650, 35648, 78397, 71123]
+
+        cls.reference2 = copy.copy(cls.reference)
+        cls.reference2[6] = 120605
+        cls.reference2[7] = 72303
+        cls.reference2[8] = 36679
 
     @classmethod
     def tearDownClass(self):
@@ -79,10 +87,7 @@ class TestFingerprint(unittest.TestCase):
 
         # only a few chunks differ
         chunks = chunksizes_from_filename(self.tmpf2.name)
-        self.reference[6] = 120605
-        self.reference[7] = 72303
-        self.reference[8] = 36679
-        self.assertEqual(self.reference, chunks)
+        self.assertEqual(self.reference2, chunks)
 
     def test_fingerprint_from_fd(self):
         with open(self.tmpf.name) as fd:
@@ -97,6 +102,14 @@ class TestFingerprint(unittest.TestCase):
 
     def test_missing_file(self):
         self.assertRaises(IOError, chunksizes_from_filename, 'noneexistentfile')
+
+    def test_fingerprint_from_string(self):
+        chunks = chunksizes_from_str(self.data)
+        self.assertEqual(self.reference, chunks)
+
+        # only a few chunks differ
+        chunks = chunksizes_from_str(self.data2)
+        self.assertEqual(self.reference2, chunks)
 
 
 if __name__ == '__main__':
