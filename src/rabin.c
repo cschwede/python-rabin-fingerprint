@@ -21,32 +21,43 @@ limitations under the License. */
     Uses Rabin fingerprint to determine block boundaries.  */
 
 
-unsigned long long *char_nth_prime(int windowsize, int prime) {
+struct state* init(int avgsize, int minsize, int maxsize, int prime, int windowsize) {
+
+    struct state *internal_state = NULL;
+    internal_state = malloc(sizeof(struct state));
+    internal_state->blocksize=0;
+    internal_state->fingerprint=0;
+    internal_state->prime = prime;
+    internal_state->avgsize = avgsize;
+    internal_state->minsize = minsize;
+    internal_state->maxsize = maxsize;
+
+    // Initialize cyclic ring
+    internal_state->head = malloc(sizeof(struct node));
+    internal_state->cycle_curr = internal_state->head;
+    internal_state->cycle_curr->value = 0;
+    for (int i = 0; i < (windowsize-1); i++) {
+        internal_state->cycle_curr->next = malloc(sizeof(struct node));
+        internal_state->cycle_curr = internal_state->cycle_curr->next;
+        internal_state->cycle_curr->value = 0;
+    }
+    internal_state->cycle_curr->next = internal_state->head; //close the ring
+
     // Calculates result = prime ^ windowsize first
     // After that multiplies all 256 bytes with result and returns static map
     static unsigned long long map[256];
     unsigned long long result = 1;
-    int i;
-    for (i=1; i<=windowsize; i++) { result *= prime; } 
-    for (i=0; i<=256; i++) { map[i] = i * result; }
-    return map;
-}
+    for (int i=1; i<=windowsize; i++) { result *= prime; }
+    for (int i=0; i<=256; i++) { map[i] = i * result; }
+    internal_state->map = map;
 
+    // initialize linked list for returned blocksizes
+    internal_state->head = malloc(sizeof(struct node));
+    internal_state->curr = internal_state->head;
+    internal_state->curr->value = 0;
+    internal_state->curr->next = NULL;
 
-struct node* init_cyclic_ring(int windowsize) {
-    struct node *cycle_head = NULL;
-    struct node *cycle_curr = NULL;
-    cycle_head = malloc(sizeof(struct node));
-    cycle_curr = cycle_head;
-    cycle_curr->value = 0;
-    int i = 0;
-    for (i = 0; i < (windowsize-1); i++) {
-        cycle_curr->next = malloc(sizeof(struct node));
-        cycle_curr = cycle_curr->next;
-        cycle_curr->value = 0;
-    }
-    cycle_curr->next = cycle_head; //close the ring
-    return cycle_curr;
+    return internal_state;
 }
 
 
@@ -78,29 +89,23 @@ void update(unsigned char *buffer, int read, struct state **internal_state) {
 }
 
 
+struct node* result(struct state **internal_state) {
+    // add last block if not yet done
+    if ((*internal_state)->blocksize != 0) {
+            (*internal_state)->curr->value = (*internal_state)->blocksize;
+            (*internal_state)->curr->next = malloc(sizeof(struct node));
+            (*internal_state)->curr = (*internal_state)->curr->next;
+            (*internal_state)->curr->next = NULL;
+            (*internal_state)->blocksize=0;
+    }
+
+    return (*internal_state)->head;
+}
+
+
 struct node* rabin(FILE *fp, int avgsize, int minsize, int maxsize, int prime, int windowsize) {
 
-    // initialize linked list for returned blocksizes
-    struct node *head = NULL;
-    struct node *curr = NULL; 
-    head = malloc(sizeof(struct node));  
-    curr = head;
-    curr->value = 0;
-    curr->next = NULL;
-
-    struct state *internal_state = NULL;
-    internal_state = malloc(sizeof(struct state));
-    internal_state->blocksize=0;
-    internal_state->fingerprint=0;
-    internal_state->prime = prime;
-    internal_state->avgsize = avgsize;
-    internal_state->minsize = minsize;
-    internal_state->maxsize = maxsize;
-    internal_state->map = char_nth_prime(windowsize, prime);
-    internal_state->cycle_curr = init_cyclic_ring(windowsize);
-
-    internal_state->curr = curr;
-    internal_state->head = head;
+    struct state *internal_state = init(avgsize, minsize, maxsize, prime, windowsize);
 
     unsigned char buffer[8192];  // reading file in chunks is much faster
     int read = 0;
@@ -108,16 +113,7 @@ struct node* rabin(FILE *fp, int avgsize, int minsize, int maxsize, int prime, i
         update(buffer, read, &internal_state);
     }
     
-    // add last block if not yet done 
-    if (internal_state->blocksize != 0) {
-            internal_state->curr->value = internal_state->blocksize;
-            internal_state->curr->next = malloc(sizeof(struct node));
-            internal_state->curr = internal_state->curr->next;
-            internal_state->curr->next = NULL;
-            internal_state->blocksize=0;
-    }
-
-    return internal_state->head;
+    return result(&internal_state);
 }
 
 
