@@ -90,14 +90,11 @@ void update(unsigned char *buffer, int read, struct state **internal_state) {
 
 
 struct node* result(struct state **internal_state) {
-    // add last block if not yet done
-    if ((*internal_state)->blocksize != 0) {
-            (*internal_state)->curr->value = (*internal_state)->blocksize;
-            (*internal_state)->curr->next = malloc(sizeof(struct node));
-            (*internal_state)->curr = (*internal_state)->curr->next;
-            (*internal_state)->curr->next = NULL;
-            (*internal_state)->blocksize=0;
-    }
+    (*internal_state)->curr->value = (*internal_state)->blocksize;
+    (*internal_state)->curr->next = malloc(sizeof(struct node));
+    (*internal_state)->curr = (*internal_state)->curr->next;
+    (*internal_state)->curr->next = NULL;
+    (*internal_state)->blocksize=0;
 
     return (*internal_state)->head;
 }

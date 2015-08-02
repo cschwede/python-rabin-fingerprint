@@ -98,7 +98,7 @@ class TestFingerprint(unittest.TestCase):
         f = tempfile.NamedTemporaryFile(delete=False)
         self.filenames.append(f.name)
         empty_chunks = chunksizes_from_filename(f.name)
-        self.assertEqual([], empty_chunks)
+        self.assertEqual([0], empty_chunks)
 
     def test_missing_file(self):
         self.assertRaises(IOError, chunksizes_from_filename, 'noneexistentfile')
